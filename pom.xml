@@ -1,0 +1,70 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.vertx</groupId>
+  <artifactId>vertx-virtual-threads-incubator</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <vertx.version>4.3.2</vertx.version>
+  </properties>
+
+  <modules>
+    <module>vertx-async-await-incubator</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-dependencies</artifactId>
+        <version>${vertx.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- Vert.x deps -->
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-core</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
+
+      <!-- Test -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.13.2</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.8.1</version>
+          <configuration>
+            <release>19</release>
+            <compilerArgs>--enable-preview</compilerArgs>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.0.0-M4</version>
+          <configuration>
+            <argLine>--enable-preview</argLine>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>
