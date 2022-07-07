@@ -15,22 +15,50 @@ Incubator for virtual threads based prototypes.
 ## Projects
 
 - [Async/await incubator](vertx-async-await-incubator/README.md)
+- [Examples](examples/README.md)
 
 ## Usage
 
-Snapshots are available at s01.oss.sonatype.org
+### enable preview flag must be enabled
 
 ```xml
-<repository>
-  <id>sonatype-nexus-snapshots</id>
-  <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-  <snapshots>
-    <enabled>true</enabled>
-  </snapshots>
-  <layout>default</layout>
-  <releases>
-    <enabled>false</enabled>
-  </releases>
-</repository>
+<build>
+  <pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <release>19</release>
+          <compilerArgs>--enable-preview</compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>--enable-preview</argLine>
+        </configuration>
+      </plugin>
+    </plugins>
+  </pluginManagement>
+</build>
 ```
 
+### snapshots are available at s01.oss.sonatype.org
+
+```xml
+  <repositories>
+  <repository>
+    <id>vertx-snapshots-repository</id>
+    <name>Vert.x Snapshots Repository</name>
+    <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
+    <releases>
+      <enabled>false</enabled>
+    </releases>
+    <snapshots>
+      <enabled>true</enabled>
+    </snapshots>
+  </repository>
+</repositories>
+```
