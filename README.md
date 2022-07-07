@@ -14,8 +14,8 @@ Incubator for virtual threads based prototypes.
 
 ## Projects
 
-- [Async/await incubator](vertx-async-await-incubator/README.md)
-- [Examples](examples/README.md)
+- [Async/await incubator](vertx-async-await-incubator)
+- [Examples](examples)
 
 ## Usage
 
