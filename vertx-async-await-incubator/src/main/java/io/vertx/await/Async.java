@@ -7,7 +7,9 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.ContextInternal;
-import io.vertx.core.impl.future.FutureInternal;
+
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.locks.Lock;
 
 public class Async {
 
@@ -26,14 +28,28 @@ public class Async {
     context.runOnContext(task);
   }
 
-  public static <T> T await(Future<T> future) {
+  private static VirtualThreadContext virtualThreadContext() {
     ContextInternal ctx = (ContextInternal) Vertx.currentContext();
     if (ctx != null) {
       ctx = ctx.unwrap();
       if (ctx instanceof VirtualThreadContext) {
-        return ((VirtualThreadContext)ctx).await((FutureInternal<T>) future);
+        return ((VirtualThreadContext)ctx);
       }
     }
     throw new IllegalStateException("Not running on a Vert.x virtual thread");
+  }
+
+  public static <T> T await(Future<T> future) {
+    return await(future.toCompletionStage().toCompletableFuture());
+  }
+
+  public static void lock(Lock lock) {
+    VirtualThreadContext ctx = virtualThreadContext();
+    ctx.lock(lock);
+  }
+
+  public static <T> T await(CompletionStage<T> future) {
+    VirtualThreadContext ctx = virtualThreadContext();
+    return ctx.await(future);
   }
 }

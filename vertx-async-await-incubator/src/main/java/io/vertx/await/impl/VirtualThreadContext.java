@@ -11,11 +11,15 @@ import io.vertx.core.impl.Deployment;
 import io.vertx.core.impl.VertxImpl;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.WorkerPool;
-import io.vertx.core.impl.future.FutureInternal;
 
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
 /**
  * A fork a WorkerContext with a couple of changes.
@@ -118,7 +122,52 @@ public class VirtualThreadContext extends ContextBase {
     return create(owner(), nettyEventLoop(), scheduler);
   }
 
-  public <T> T await(FutureInternal<T> future) {
-    return scheduler.await(future.toCompletionStage().toCompletableFuture());
+  public void lock(Lock lock) {
+    Consumer<Runnable> cont = scheduler.detach();
+    CompletableFuture<Void> latch = new CompletableFuture<>();
+    try {
+      lock.lock();
+      cont.accept(() -> latch.complete(null));
+    } catch(RuntimeException e) {
+      cont.accept(() -> latch.completeExceptionally(e));
+    }
+    try {
+      latch.get();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    } catch (ExecutionException e) {
+      throwAsUnchecked(e);
+    }
+  }
+
+  public <T> T await(CompletionStage<T> fut) {
+    Consumer<Runnable> cont = scheduler.detach();
+    CompletableFuture<T> latch = new CompletableFuture<>();
+    fut.whenComplete((v, err) -> {
+      cont.accept(() -> {
+        doComplete(v, err, latch);
+      });
+    });
+    try {
+      return latch.get();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    } catch (ExecutionException e) {
+      throwAsUnchecked(e);
+      return null;
+    }
+  }
+
+  private static <T> void doComplete(T val, Throwable err, CompletableFuture<T> fut) {
+    if (err == null) {
+      fut.complete(val);
+    } else {
+      fut.completeExceptionally(err);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static <E extends Throwable> void throwAsUnchecked(Throwable t) throws E {
+    throw (E) t;
   }
 }

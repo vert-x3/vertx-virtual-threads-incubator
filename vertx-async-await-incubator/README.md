@@ -28,11 +28,13 @@ You can view all [examples](vertx-async-await-incubator/src/main/java/examples/A
 
 ### What this is about
 
-Async/Await for Vert.x futures.
+Async/Await for Vert.x
 
 ### What this is not about
 
 Blocking on other JDK blocking constructs such as latches, locks, sleep, etc... (since it would imply to have a multi-threaded application).
+
+NOTE: it remains possible to block on these constructs using `await`
 
 ### What you get
 
@@ -88,6 +90,34 @@ try {
   HttpClientResponse response = await(promise.future());
 } catch (Exception timeout) {
   // Too late
+}
+```
+
+### Supported primitives
+
+#### Futures
+
+You can await a Vert.x `Future`
+
+```java
+Buffer body = await(response.body());
+```
+
+or a JDK `CompletionStage`
+
+```java
+Buffer body = await(response.body().toCompletionStage());
+```
+
+#### Locks
+
+You can lock a `java.util.Lock`
+
+```java
+try (lock(theLock)) {
+  //
+} finally {
+  theLock.unlock();
 }
 ```
 

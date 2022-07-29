@@ -1,11 +1,10 @@
 package io.vertx.await.impl;
 
 import java.util.LinkedList;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 /**
  * A scheduler that run tasks on virtual threads that can await futures.
@@ -75,7 +74,7 @@ public class Scheduler implements Executor {
     return inThread.get() == Boolean.TRUE;
   }
 
-  public <T> T await(CompletableFuture<T> fut) {
+  public Consumer<Runnable> detach() {
     Thread th = Thread.currentThread();
     Thread toStart;
     lock.lock();
@@ -95,8 +94,7 @@ public class Scheduler implements Executor {
     if (toStart != null) {
       toStart.start();
     }
-    CompletableFuture<T> latch = new CompletableFuture<>();
-    fut.whenComplete((v, err) -> {
+    return r -> {
       lock.lock();
       try {
         if (current != null) {
@@ -107,7 +105,7 @@ public class Scheduler implements Executor {
             } finally {
               lock.unlock();
             }
-            doComplete(v, err, latch);
+            r.run();
           });
           return;
         }
@@ -115,28 +113,7 @@ public class Scheduler implements Executor {
       } finally {
         lock.unlock();
       }
-      doComplete(v, err, latch);
-    });
-    try {
-      return latch.get();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    } catch (ExecutionException e) {
-      throwAsUnchecked(e);
-      return null;
-    }
-  }
-
-  private static <T> void doComplete(T val, Throwable err, CompletableFuture<T> fut) {
-    if (err == null) {
-      fut.complete(val);
-    } else {
-      fut.completeExceptionally(err);
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private static <E extends Throwable> void throwAsUnchecked(Throwable t) throws E {
-    throw (E) t;
+      r.run();
+    };
   }
 }

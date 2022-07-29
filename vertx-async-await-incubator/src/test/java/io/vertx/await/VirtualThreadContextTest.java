@@ -12,6 +12,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class VirtualThreadContextTest extends VertxTestBase {
 
@@ -156,6 +157,37 @@ public class VirtualThreadContextTest extends VertxTestBase {
           testComplete();
         });
       }).start();
+    });
+    await();
+  }
+
+  @Test
+  public void testAcquireLock() throws Exception {
+    ReentrantLock lock = new ReentrantLock();
+    Thread t = new Thread(() -> {
+      lock.lock();
+      try {
+        while (!lock.hasQueuedThreads()) {
+          try {
+            Thread.sleep(10);
+          } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      } catch (Exception e) {
+        fail(e);
+      } finally {
+        lock.unlock();
+      }
+    });
+    t.start();
+    while (!lock.isLocked()) {
+      Thread.sleep(10);
+    }
+    async.run(v1 -> {
+      Async.lock(lock);
+      assertTrue(lock.isHeldByCurrentThread());
+      testComplete();
     });
     await();
   }
