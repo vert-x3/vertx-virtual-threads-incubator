@@ -111,7 +111,7 @@ Buffer body = await(response.body().toCompletionStage());
 
 #### Locks
 
-You can lock a `java.util.Lock`
+You can lock a `java.util.concurrent.locks`
 
 ```java
 try (lock(theLock)) {
