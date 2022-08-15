@@ -51,7 +51,7 @@ public class App {
       await(client.query(st).execute());
     });
 
-    Router router = Router.router(vertx);
+    var router = Router.router(vertx);
     router.get("/movie/:id").handler(ctx -> getMovie(ctx));
     router.post("/rateMovie/:id").handler(ctx -> rateMovie(ctx));
     router.get("/getRating/:id").handler(ctx -> getRating(ctx));
@@ -65,8 +65,8 @@ public class App {
   }
 
   private static void getMovie(RoutingContext ctx) {
-    String id = ctx.pathParam("id");
-    RowSet<Row> rows = await(client.preparedQuery("SELECT TITLE FROM MOVIE WHERE ID=?").execute(Tuple.of(id)));
+    var id = ctx.pathParam("id");
+    var rows = await(client.preparedQuery("SELECT TITLE FROM MOVIE WHERE ID=?").execute(Tuple.of(id)));
     if (rows.size() == 1) {
       ctx.response().end(new JsonObject().put("id", id).put("title", rows.iterator().next().getString("TITLE")).encode());
     } else {
@@ -75,9 +75,9 @@ public class App {
   }
 
   private static void rateMovie(RoutingContext ctx) {
-    String movie = ctx.pathParam("id");
-    int rating = Integer.parseInt(ctx.queryParam("rating").get(0));
-    RowSet<Row> rows = await(client.preparedQuery("SELECT TITLE FROM MOVIE WHERE ID=?").execute(Tuple.of(movie)));
+    var movie = ctx.pathParam("id");
+    var rating = Integer.parseInt(ctx.queryParam("rating").get(0));
+    var rows = await(client.preparedQuery("SELECT TITLE FROM MOVIE WHERE ID=?").execute(Tuple.of(movie)));
     if (rows.size() == 1) {
       await(client.preparedQuery("INSERT INTO RATING (VALUE, MOVIE_ID) VALUES ?, ?").execute(Tuple.of(rating, movie)));
       ctx.response().setStatusCode(200).end();
@@ -87,8 +87,8 @@ public class App {
   }
 
   private static void getRating(RoutingContext ctx) {
-    String id = ctx.pathParam("id");
-    RowSet<Row> rows = await(client.preparedQuery("SELECT AVG(VALUE) AS VALUE FROM RATING WHERE MOVIE_ID=?").execute(Tuple.of(id)));
+    var id = ctx.pathParam("id");
+    var rows = await(client.preparedQuery("SELECT AVG(VALUE) AS VALUE FROM RATING WHERE MOVIE_ID=?").execute(Tuple.of(id)));
     ctx.response().end(new JsonObject().put("id", id).put("rating", rows.iterator().next().getDouble("VALUE")).encode());
   }
 }
