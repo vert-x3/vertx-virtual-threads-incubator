@@ -1,4 +1,4 @@
-package examples;
+package examples.core;
 
 import io.vertx.await.Async;
 import io.vertx.core.Future;
