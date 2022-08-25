@@ -6,6 +6,10 @@ NOTE: you can reuse this Maven project to start with.
 
 [HTTP client](src/main/java/examples/core/HttpClientExample.java)
 
+### Execute blocking
+
+[Execute blocking](src/main/java/examples/core/ExecuteBlockingExample.java)
+
 ### Movie rating
 
 The [application](src/main/java/examples/movierating/App.java) exposes a REST API for rating movies:
