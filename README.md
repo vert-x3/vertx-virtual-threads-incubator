@@ -8,7 +8,7 @@ Incubator for virtual threads based prototypes.
 
 - [Vert.x 4.3.4](https://vertx.io/docs/4.3.4)
 - Java 19 using preview feature
-  - [OpenJDK 19 EA](https://jdk.java.net/19/)
+  - [OpenJDK 19](https://jdk.java.net/19/)
   - [Maven](https://stackoverflow.com/questions/52232681/compile-and-execute-a-jdk-preview-feature-with-maven)
   - [Intellij](https://foojay.io/today/how-to-run-project-loom-from-intellij-idea/)
 
