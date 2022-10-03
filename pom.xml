@@ -20,6 +20,7 @@
   <modules>
     <module>vertx-async-await-incubator</module>
     <module>vertx-execute-blocking-incubator</module>
+    <module>vertx-core-sync-incubator</module>
     <module>examples</module>
   </modules>
 
