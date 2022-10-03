@@ -5,6 +5,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.sync.http.HttpServerRequest;
 import io.vertx.core.sync.http.HttpServerResponse;
+import io.vertx.web.sync.RoutingContext;
 import io.vertx.web.sync.WebHandler;
 
 public class RoutingContextImpl implements RoutingContextInternal {
@@ -27,6 +28,16 @@ public class RoutingContextImpl implements RoutingContextInternal {
   @Override
   public HttpMethod method() {
     return req.method();
+  }
+
+  @Override
+  public String getHeader(CharSequence key) {
+    return req.headers().get(key);
+  }
+
+  public RoutingContext putHeader(CharSequence key, CharSequence value) {
+    res.headers().add(key, value);
+    return this;
   }
 
   @Override

@@ -23,6 +23,10 @@ public class HttpClientRequest {
     delegate.end();
   }
 
+  public void putHeader(CharSequence var1, CharSequence var2) {
+    delegate.putHeader(var1, var2);
+  }
+
   public HttpClientResponse response() {
     return new HttpClientResponse(await(delegate.response()));
   }
