@@ -1,6 +1,7 @@
 package io.vertx.core.sync.http;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpMethod;
 
 import static io.vertx.await.Async.await;
 
@@ -14,8 +15,12 @@ public class HttpServerRequest {
     this.response = new HttpServerResponse(delegate.response());
   }
 
-  public String method() {
-    return delegate.method().name();
+  public HttpMethod method() {
+    return delegate.method();
+  }
+
+  public String path() {
+    return delegate.path();
   }
 
   public Buffer body() {
