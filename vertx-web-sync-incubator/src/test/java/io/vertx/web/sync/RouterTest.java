@@ -1,6 +1,5 @@
 package io.vertx.web.sync;
 
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.sync.Vertx;
 import io.vertx.core.sync.http.HttpClient;
 import io.vertx.core.sync.http.HttpClientRequest;
@@ -65,8 +64,8 @@ public class RouterTest {
     test(() -> {
       final Router app = Router.create();
 
-      app.on(
-        HttpMethod.GET, "/",
+      app.get(
+        "/",
         ctx -> {
           System.out.println("Logging request! " + ctx);
           return ctx.next();
