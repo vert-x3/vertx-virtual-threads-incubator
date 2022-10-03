@@ -11,23 +11,23 @@ This is still a early WiP but to showcase what we can do:
 
 
 ```java
-      final Router app = Router.create();
+  final Router app = Router.create();
 
   app.get(
-  "/",
-  ctx -> {
-  System.out.println("Logging request! " + ctx);
-  return ctx.next();
-  },
-  new BasicAuthHandler(PropertyFileAuthentication.create(vertx.unwrap(), "test-auth.properties")),
-  ctx -> {
-  return ctx.end("Hello World");
-  }
+    "/",
+    ctx -> {
+      System.out.println("Logging request! " + ctx);
+      return ctx.next();
+    },
+    new BasicAuthHandler(PropertyFileAuthentication.create(vertx.unwrap(), "test-auth.properties")),
+    ctx -> {
+      return ctx.end("Hello World");
+    }
   );
 
   vertx.createHttpServer()
-  .requestHandler(app)
-  .listen(8080, "0.0.0.0");
+    .requestHandler(app)
+    .listen(8080, "0.0.0.0");
 
 
   HttpClient client = vertx.createHttpClient();
