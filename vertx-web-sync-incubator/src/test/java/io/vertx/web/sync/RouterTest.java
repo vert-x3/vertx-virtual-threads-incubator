@@ -4,6 +4,8 @@ import io.vertx.core.sync.Vertx;
 import io.vertx.core.sync.http.HttpClient;
 import io.vertx.core.sync.http.HttpClientRequest;
 import io.vertx.core.sync.http.HttpClientResponse;
+import io.vertx.ext.auth.properties.PropertyFileAuthentication;
+import io.vertx.web.sync.handler.BasicAuthHandler;
 import junit.framework.AssertionFailedError;
 import org.junit.After;
 import org.junit.Before;
@@ -70,6 +72,7 @@ public class RouterTest {
           System.out.println("Logging request! " + ctx);
           return ctx.next();
         },
+        new BasicAuthHandler(PropertyFileAuthentication.create(vertx.unwrap(), "test-auth.properties")),
         ctx -> {
           return ctx.end("Hello World");
         }
@@ -82,6 +85,7 @@ public class RouterTest {
 
       HttpClient client = vertx.createHttpClient();
       HttpClientRequest request = client.request(8080, "localhost", "GET", "/");
+      request.putHeader("AUTHORIZATION", "Basic cGF1bG86c2VjcmV0");
       request.end();
       HttpClientResponse response = request.response();
       assertEquals(200, response.statusCode());

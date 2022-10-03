@@ -1,5 +1,6 @@
 package io.vertx.core.sync.http;
 
+import io.vertx.core.MultiMap;
 import io.vertx.core.buffer.Buffer;
 
 public class HttpServerResponse {
@@ -13,6 +14,10 @@ public class HttpServerResponse {
   public HttpServerResponse status(int sc) {
     delegate.setStatusCode(sc);
     return this;
+  }
+
+  public MultiMap headers() {
+    return delegate.headers();
   }
 
   public void end(Buffer chunk) {

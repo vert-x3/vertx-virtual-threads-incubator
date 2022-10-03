@@ -61,4 +61,5 @@ public interface Router extends Handler<HttpServerRequest> {
     }
 
     return this;
-  }}
+  }
+}

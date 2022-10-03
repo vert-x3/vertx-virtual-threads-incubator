@@ -15,6 +15,10 @@ public class Vertx {
     async = new Async(delegate);
   }
 
+  public io.vertx.core.Vertx unwrap() {
+    return delegate;
+  }
+
   public HttpServer createHttpServer() {
     return new HttpServer(delegate);
   }
