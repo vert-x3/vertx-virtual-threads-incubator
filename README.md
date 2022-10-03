@@ -16,6 +16,9 @@ Incubator for virtual threads based prototypes.
 
 - [Async/await incubator](vertx-async-await-incubator)
 - [Execute blocking incubator](vertx-execute-blocking-incubator)
+- Synchronous Vert.x incubator
+  - [Core](vertx-core-sync-incubator)
+  - [Web](vertx-web-sync-incubator)
 - [Examples](examples)
 
 ## Usage
