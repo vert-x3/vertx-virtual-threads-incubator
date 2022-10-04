@@ -32,8 +32,15 @@
 
     <!-- Test dependencies -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core-sync-incubator</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
+      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
   </dependencies>

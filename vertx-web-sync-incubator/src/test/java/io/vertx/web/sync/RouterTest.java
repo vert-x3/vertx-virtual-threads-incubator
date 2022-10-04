@@ -1,96 +1,44 @@
 package io.vertx.web.sync;
 
-import io.vertx.core.sync.Vertx;
 import io.vertx.core.sync.http.HttpClient;
 import io.vertx.core.sync.http.HttpClientRequest;
 import io.vertx.core.sync.http.HttpClientResponse;
+import io.vertx.junit5.VirtualThreadTestBase;
 import io.vertx.ext.auth.properties.PropertyFileAuthentication;
 import io.vertx.web.sync.handler.BasicAuthHandler;
-import junit.framework.AssertionFailedError;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import static org.junit.Assert.assertEquals;
-
-public class RouterTest {
-
-  private Vertx vertx = new Vertx();
-
-  @Before
-  public void before() {
-    vertx = new Vertx();
-  }
-
-  @After
-  public void after() {
-    try {
-      vertx.close();
-    } finally {
-      vertx = null;
-    }
-  }
-
-  private void test(Runnable runnable) {
-    CompletableFuture<Void> cf = new CompletableFuture<>();
-    vertx.execute(v -> {
-      try {
-        runnable.run();
-        cf.complete(null);
-      } catch (Throwable t) {
-        cf.completeExceptionally(t);
-      }
-    });
-    try {
-      cf.get();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    } catch (ExecutionException e) {
-      Throwable cause = e.getCause();
-      if (cause instanceof AssertionFailedError) {
-        throw ((AssertionFailedError) cause);
-      } else {
-        AssertionFailedError afe = new AssertionFailedError();
-        afe.initCause(cause);
-        throw afe;
-      }
-    }
-  }
+public class RouterTest extends VirtualThreadTestBase {
 
   @Test
-  public void testBootstrapWeb() throws Exception {
+  public void testBootstrapWeb() {
+    final Router app = Router.create();
 
-    test(() -> {
-      final Router app = Router.create();
+    app.get(
+      "/",
+      ctx -> {
+        System.out.println("Logging request! " + ctx);
+        return ctx.next();
+      },
+      new BasicAuthHandler(PropertyFileAuthentication.create(vertx.unwrap(), "test-auth.properties")),
+      ctx -> {
+        return ctx.end("Hello World");
+      }
+    );
 
-      app.get(
-        "/",
-        ctx -> {
-          System.out.println("Logging request! " + ctx);
-          return ctx.next();
-        },
-        new BasicAuthHandler(PropertyFileAuthentication.create(vertx.unwrap(), "test-auth.properties")),
-        ctx -> {
-          return ctx.end("Hello World");
-        }
-      );
-
-      vertx.createHttpServer()
-        .requestHandler(app)
-        .listen(8080, "0.0.0.0");
+    vertx.createHttpServer()
+      .requestHandler(app)
+      .listen(8080, "0.0.0.0");
 
 
-      HttpClient client = vertx.createHttpClient();
-      HttpClientRequest request = client.request(8080, "localhost", "GET", "/");
-      request.putHeader("AUTHORIZATION", "Basic cGF1bG86c2VjcmV0");
-      request.end();
-      HttpClientResponse response = request.response();
-      assertEquals(200, response.statusCode());
-      assertEquals("Hello World", response.body().toString());
-    });
-
+    HttpClient client = vertx.createHttpClient();
+    HttpClientRequest request = client.request(8080, "localhost", "GET", "/");
+    request.putHeader("AUTHORIZATION", "Basic cGF1bG86c2VjcmV0");
+    request.end();
+    HttpClientResponse response = request.response();
+    assertEquals(200, response.statusCode());
+    assertEquals("Hello World", response.body().toString());
   }
 }
