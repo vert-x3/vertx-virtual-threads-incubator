@@ -16,21 +16,39 @@ import io.vertx.test.core.VertxTestBase;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 
+@RunWith(Parameterized.class)
 public class HttpTest extends VertxTestBase {
 
+  @Parameterized.Parameters
+  public static Collection input() {
+    return Arrays.asList(new Object[][] {
+      { true },
+      { false}
+    });
+  }
+
   Async async;
+  boolean useVirtualEventLoopThreads;
+
+  public HttpTest(boolean useVirtualEventLoopThreads) {
+    this.useVirtualEventLoopThreads = useVirtualEventLoopThreads;
+  }
 
   @Before
   public void setUp() throws Exception {
     super.setUp();
-    async = new Async(vertx);
+    async = new Async(vertx, useVirtualEventLoopThreads);
   }
 
   @Ignore

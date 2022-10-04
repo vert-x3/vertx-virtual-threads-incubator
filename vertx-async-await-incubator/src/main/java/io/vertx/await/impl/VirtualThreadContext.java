@@ -32,7 +32,6 @@ public class VirtualThreadContext extends ContextBase {
   }
 
   private final Scheduler scheduler;
-  private Executor executor;
 
   VirtualThreadContext(VertxInternal vertx,
                        EventLoop eventLoop,

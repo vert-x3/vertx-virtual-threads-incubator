@@ -114,7 +114,8 @@ Buffer body = await(response.body().toCompletionStage());
 You can lock a `java.util.concurrent.locks`
 
 ```java
-try (lock(theLock)) {
+lock(theLock);
+  try {
   //
 } finally {
   theLock.unlock();
@@ -133,6 +134,31 @@ HttpClientResponse resp = Async.await(req.send());
 // Thread local remains the same since it's the same virtual thread
 ```
 
+### Virtual thread scheduling
+
+#### Default scheduler
+
+The implementation schedules virtual threads on the built-in scheduler.
+
+#### Event loop scheduler
+
+An implementation (using internal java API) schedules virtual threads on vertx event-loops.
+
+```java
+Async async = new Async(vertx, true);
+```
+
+It removes the need for Vert.x to be aware of thread blocking, e.g
+
+```java
+lock.lock();
+try {
+  //
+} finally {
+  theLock.unlock();
+}
+```
+
 ### How it works
 
 `VirtualThreadContext` implements `io.vertx.core.Context` and runs Vert.x task on virtual threads.
@@ -141,5 +167,4 @@ Like other context implementations `VirtualThreadContext` serializes tasks, so t
 
 When the virtual thread awaits a future, the virtual thread is parked and a new virtual thread can be started to continue handling tasks
 
-When a future is completed, the virtual thread is unparked and is executed next (the future might be completed by a context task like a timer)
-and preempts all the context pending tasks.
+When a future is completed, the virtual thread is unparked and is executed next (the future might be completed by a context task like a timer) and preempts all the context pending tasks.

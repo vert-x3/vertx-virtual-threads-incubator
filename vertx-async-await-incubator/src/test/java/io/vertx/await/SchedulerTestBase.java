@@ -1,6 +1,7 @@
 package io.vertx.await;
 
 import io.vertx.await.impl.Scheduler;
+import io.vertx.await.impl.DefaultScheduler;
 import io.vertx.test.core.VertxTestBase;
 import org.junit.Test;
 
@@ -9,36 +10,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-public class SchedulerTest extends VertxTestBase {
+public abstract class SchedulerTestBase extends VertxTestBase {
 
-
-  private static void sleep() {
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private Scheduler scheduler;
+  protected Scheduler scheduler;
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    scheduler = new Scheduler();
+    scheduler = new DefaultScheduler(DefaultScheduler.DEFAULT_THREAD_FACTORY);
     disableThreadChecks();
-  }
-
-  @Test
-  public void testSingleThreaded() {
-    scheduler.execute(() -> {
-      Thread current = Thread.currentThread();
-      scheduler.execute(() -> {
-        assertSame(current, Thread.currentThread());
-        testComplete();
-      });
-    });
-    await();
   }
 
   @Test

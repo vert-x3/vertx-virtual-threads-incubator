@@ -1,8 +1,10 @@
 package io.vertx.await;
 
 import io.netty.channel.EventLoop;
-import io.vertx.await.impl.VirtualThreadContext;
+import io.vertx.await.impl.EventLoopScheduler;
 import io.vertx.await.impl.Scheduler;
+import io.vertx.await.impl.VirtualThreadContext;
+import io.vertx.await.impl.DefaultScheduler;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -14,9 +16,15 @@ import java.util.concurrent.locks.Lock;
 public class Async {
 
   private final Vertx vertx;
+  private final boolean useVirtualEventLoopThreads;
 
   public Async(Vertx vertx) {
+    this(vertx, false);
+  }
+
+  public Async(Vertx vertx, boolean useVirtualEventLoopThreads) {
     this.vertx = vertx;
+    this.useVirtualEventLoopThreads = useVirtualEventLoopThreads;
   }
 
   /**
@@ -24,7 +32,9 @@ public class Async {
    */
   public void run(Handler<Void> task) {
     EventLoop eventLoop = vertx.nettyEventLoopGroup().next();
-    VirtualThreadContext context = VirtualThreadContext.create(vertx, eventLoop, new Scheduler());
+    // Scheduler scheduler = useVirtualEventLoopThreads ? new SchedulerImpl(LoomaniaScheduler2.threadFactory(eventLoop)): new SchedulerImpl(SchedulerImpl.DEFAULT_THREAD_FACTORY);
+    Scheduler scheduler = useVirtualEventLoopThreads ? new EventLoopScheduler(eventLoop) : new DefaultScheduler(DefaultScheduler.DEFAULT_THREAD_FACTORY);
+    VirtualThreadContext context = VirtualThreadContext.create(vertx, eventLoop, scheduler);
     context.runOnContext(task);
   }
 
