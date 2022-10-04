@@ -35,13 +35,6 @@
         <scope>import</scope>
       </dependency>
 
-      <!-- Vert.x deps -->
-      <dependency>
-        <groupId>io.vertx</groupId>
-        <artifactId>vertx-core</artifactId>
-        <version>${vertx.version}</version>
-      </dependency>
-
       <!-- Test -->
       <dependency>
         <groupId>junit</groupId>
