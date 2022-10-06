@@ -159,6 +159,19 @@ try {
 }
 ```
 
+It requires to open the `java.base` and `java.lang` modules:
+
+```xml
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-surefire-plugin</artifactId>
+  <version>3.0.0-M4</version>
+  <configuration>
+    <argLine>--enable-preview  --add-opens=java.base/java.lang=ALL-UNNAMED</argLine>
+  </configuration>
+</plugin>
+```
+
 ### How it works
 
 `VirtualThreadContext` implements `io.vertx.core.Context` and runs Vert.x task on virtual threads.

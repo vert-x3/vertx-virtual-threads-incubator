@@ -11,8 +11,18 @@ public class Vertx {
   private final io.vertx.core.Vertx delegate;
 
   public Vertx() {
+    this(false);
+  }
+
+  /**
+   * Build a sync Vert.x instance
+   *
+   * @param useVirtualEventLoopThreads {@code true} when virtual threads should use the event-loop (requires
+   *                                               specific JVM runtime configuration)
+   */
+  public Vertx(boolean useVirtualEventLoopThreads) {
     delegate = io.vertx.core.Vertx.vertx();
-    async = new Async(delegate);
+    async = new Async(delegate, useVirtualEventLoopThreads);
   }
 
   public io.vertx.core.Vertx unwrap() {
