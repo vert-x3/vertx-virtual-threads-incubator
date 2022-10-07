@@ -46,7 +46,7 @@ public abstract class VirtualThreadContextTestBase extends VertxTestBase {
   }
 
   @Test
-  public void testAwaitFuture() {
+  public void testAwaitFutureSuccess() {
     Object result = new Object();
     async.run(v -> {
       ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
@@ -60,6 +60,32 @@ public abstract class VirtualThreadContextTestBase extends VertxTestBase {
       }).start();
       assertSame(result, async.await(promise.future()));
       testComplete();
+    });
+    await();
+  }
+
+  @Test
+  public void testAwaitFutureFailure() {
+    Object result = new Object();
+    Exception failure = new Exception();
+    async.run(v -> {
+      ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
+      PromiseInternal<Object> promise = context.promise();
+      new Thread(() -> {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException ignore) {
+        }
+        promise.fail(failure);
+      }).start();
+      try {
+        async.await(promise.future());
+      } catch (Exception e) {
+        assertSame(failure, e);
+        testComplete();
+        return;
+      }
+      fail();
     });
     await();
   }

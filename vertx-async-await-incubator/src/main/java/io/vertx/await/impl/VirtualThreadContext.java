@@ -152,7 +152,7 @@ public class VirtualThreadContext extends ContextBase {
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     } catch (ExecutionException e) {
-      throwAsUnchecked(e);
+      throwAsUnchecked(e.getCause());
       return null;
     }
   }
