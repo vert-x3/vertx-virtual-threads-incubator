@@ -11,8 +11,18 @@ public class HttpServerResponse {
     this.delegate = delegate;
   }
 
-  public HttpServerResponse status(int sc) {
+  public HttpServerResponse statusCode(int sc) {
     delegate.setStatusCode(sc);
+    return this;
+  }
+
+  public HttpServerResponse putHeader(String name, String value) {
+    delegate.putHeader(name, value);
+    return this;
+  }
+
+  public HttpServerResponse putHeader(CharSequence name, CharSequence value) {
+    delegate.putHeader(name, value);
     return this;
   }
 

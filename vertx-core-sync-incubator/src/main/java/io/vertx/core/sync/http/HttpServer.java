@@ -36,4 +36,8 @@ public class HttpServer {
     delegate.requestHandler();
     await(delegate.listen(port, host));
   }
+
+  public void close() {
+    await(delegate.close());
+  }
 }

@@ -27,6 +27,10 @@ public class HttpClientRequest {
     delegate.putHeader(var1, var2);
   }
 
+  public HttpClientResponse send() {
+    return new HttpClientResponse(await(delegate.send()));
+  }
+
   public HttpClientResponse response() {
     return new HttpClientResponse(await(delegate.response()));
   }

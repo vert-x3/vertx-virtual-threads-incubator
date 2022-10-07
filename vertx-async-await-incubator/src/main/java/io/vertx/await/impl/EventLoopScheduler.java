@@ -16,6 +16,10 @@ public class EventLoopScheduler implements Scheduler {
   static final boolean ok;
   static final MethodHandle virtualThreadFactory;
 
+  public static boolean isAvailable() {
+    return ok;
+  }
+
   static {
     boolean isOk = false;
     MethodHandle vtf = null;

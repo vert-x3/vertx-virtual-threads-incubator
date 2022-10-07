@@ -16,6 +16,10 @@ public class HttpServerRequest {
     this.response = new HttpServerResponse(delegate.response());
   }
 
+  public String getParam(String name) {
+    return delegate.getParam(name);
+  }
+
   public HttpMethod method() {
     return delegate.method();
   }
@@ -35,4 +39,5 @@ public class HttpServerRequest {
   public HttpServerResponse response() {
     return response;
   }
+
 }
