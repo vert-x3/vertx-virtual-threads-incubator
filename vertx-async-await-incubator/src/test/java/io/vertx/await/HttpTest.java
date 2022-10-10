@@ -150,10 +150,12 @@ public class HttpTest extends VertxTestBase {
       HttpClientRequest req = async.await(client.request(HttpMethod.GET, 8088, "localhost", "/"));
       PromiseInternal<HttpClientResponse> promise = ctx.promise();
       req.send().onComplete(promise);
-      vertx.setTimer(500, id -> promise.tryFail("Too late"));
+      Exception failure = new Exception("Too late");
+      vertx.setTimer(500, id -> promise.tryFail(failure));
       try {
         HttpClientResponse resp = async.await(promise.future());
       } catch (Exception e) {
+        assertSame(failure, e);
         testComplete();
       }
     });
