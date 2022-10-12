@@ -25,7 +25,6 @@ public class DefaultScheduler implements Scheduler {
   private final ThreadFactory threadFactory;
   private final LinkedList<Runnable> tasks = new LinkedList<>();
   private Thread current;
-  private final ThreadLocal<Boolean> inThread = new ThreadLocal<>();
   private final ReentrantLock lock = new ReentrantLock();
 
   public DefaultScheduler(ThreadFactory threadFactory) {
@@ -65,17 +64,8 @@ public class DefaultScheduler implements Scheduler {
       } finally {
         lock.unlock();
       }
-      inThread.set(true);
-      try {
-        cmd.run();
-      } finally {
-        inThread.set(false);
-      }
+      cmd.run();
     }
-  }
-
-  public boolean inThread() {
-    return inThread.get() == Boolean.TRUE;
   }
 
   public Consumer<Runnable> detach() {

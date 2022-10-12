@@ -77,13 +77,6 @@ public class EventLoopScheduler implements Scheduler {
     });
   }
 
-  private ThreadLocal<Boolean> inThread = new ThreadLocal<>();
-
-  @Override
-  public boolean inThread() {
-    return inThread.get() == Boolean.TRUE;
-  }
-
   @Override
   public Consumer<Runnable> detach() {
     return Runnable::run;
@@ -91,12 +84,7 @@ public class EventLoopScheduler implements Scheduler {
 
   public void execute(Runnable runnable) {
     Thread thread = threadFactory.newThread(() -> {
-      inThread.set(true);
-      try {
-        runnable.run();
-      } finally {
-        inThread.remove();
-      }
+      runnable.run();
     });
     flag = true;
     try {

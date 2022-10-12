@@ -32,6 +32,7 @@ public class VirtualThreadContext extends ContextBase {
   }
 
   private final Scheduler scheduler;
+  private final ThreadLocal<Boolean> inThread = new ThreadLocal<>();
 
   VirtualThreadContext(VertxInternal vertx,
                        EventLoop eventLoop,
@@ -96,23 +97,38 @@ public class VirtualThreadContext extends ContextBase {
   private <T> void run(ContextInternal ctx, T value, Handler<T> task) {
     Objects.requireNonNull(task, "Task handler must not be null");
     scheduler.execute(() -> {
-      ctx.dispatch(value, task);
+      inThread.set(true);
+      try {
+        ctx.dispatch(value, task);
+      } finally {
+        inThread.remove();
+      }
     });
   }
 
   private <T> void execute2(T argument, Handler<T> task) {
     if (Context.isOnWorkerThread()) {
-      task.handle(argument);
+      inThread.set(true);
+      try {
+        task.handle(argument);
+      } finally {
+        inThread.remove();
+      }
     } else {
       scheduler.execute(() -> {
-        task.handle(argument);
+        inThread.set(true);
+        try {
+          task.handle(argument);
+        } finally {
+          inThread.remove();
+        }
       });
     }
   }
 
   @Override
   public boolean inThread() {
-    return scheduler.inThread();
+    return inThread.get() == Boolean.TRUE;
   }
 
   @Override
@@ -122,6 +138,7 @@ public class VirtualThreadContext extends ContextBase {
   }
 
   public void lock(Lock lock) {
+    inThread.remove();
     Consumer<Runnable> cont = scheduler.detach();
     CompletableFuture<Void> latch = new CompletableFuture<>();
     try {
@@ -136,10 +153,13 @@ public class VirtualThreadContext extends ContextBase {
       throw new RuntimeException(e);
     } catch (ExecutionException e) {
       throwAsUnchecked(e);
+    } finally {
+      inThread.set(true);
     }
   }
 
   public <T> T await(CompletionStage<T> fut) {
+    inThread.remove();
     Consumer<Runnable> cont = scheduler.detach();
     CompletableFuture<T> latch = new CompletableFuture<>();
     fut.whenComplete((v, err) -> {
@@ -154,6 +174,8 @@ public class VirtualThreadContext extends ContextBase {
     } catch (ExecutionException e) {
       throwAsUnchecked(e.getCause());
       return null;
+    } finally {
+      inThread.set(true);
     }
   }
 

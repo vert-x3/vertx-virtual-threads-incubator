@@ -10,8 +10,6 @@ import java.util.function.Consumer;
  */
 public interface Scheduler extends Executor {
 
-  boolean inThread();
-
   /**
    * Signals the scheduler the current thread does not own anymore the scheduler permit.
    *
