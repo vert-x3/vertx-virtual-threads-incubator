@@ -15,6 +15,6 @@ public interface Scheduler extends Executor {
    *
    * @return an object to schedule a task for execution, the scheduled tasks preempts the scheduler task queue
    */
-  Consumer<Runnable> detach();
+  Consumer<Runnable> unschedule();
 
 }

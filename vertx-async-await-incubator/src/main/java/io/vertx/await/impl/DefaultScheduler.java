@@ -68,7 +68,7 @@ public class DefaultScheduler implements Scheduler {
     }
   }
 
-  public Consumer<Runnable> detach() {
+  public Consumer<Runnable> unschedule() {
     Thread th = Thread.currentThread();
     Thread toStart;
     lock.lock();

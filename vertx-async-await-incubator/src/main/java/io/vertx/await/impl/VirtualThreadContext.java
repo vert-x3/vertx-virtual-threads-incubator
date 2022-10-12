@@ -139,7 +139,7 @@ public class VirtualThreadContext extends ContextBase {
 
   public void lock(Lock lock) {
     inThread.remove();
-    Consumer<Runnable> cont = scheduler.detach();
+    Consumer<Runnable> cont = scheduler.unschedule();
     CompletableFuture<Void> latch = new CompletableFuture<>();
     try {
       lock.lock();
@@ -160,7 +160,7 @@ public class VirtualThreadContext extends ContextBase {
 
   public <T> T await(CompletionStage<T> fut) {
     inThread.remove();
-    Consumer<Runnable> cont = scheduler.detach();
+    Consumer<Runnable> cont = scheduler.unschedule();
     CompletableFuture<T> latch = new CompletableFuture<>();
     fut.whenComplete((v, err) -> {
       cont.accept(() -> {

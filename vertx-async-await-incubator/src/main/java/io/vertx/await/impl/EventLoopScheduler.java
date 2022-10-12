@@ -78,14 +78,12 @@ public class EventLoopScheduler implements Scheduler {
   }
 
   @Override
-  public Consumer<Runnable> detach() {
+  public Consumer<Runnable> unschedule() {
     return Runnable::run;
   }
 
   public void execute(Runnable runnable) {
-    Thread thread = threadFactory.newThread(() -> {
-      runnable.run();
-    });
+    Thread thread = threadFactory.newThread(runnable);
     flag = true;
     try {
       thread.start();

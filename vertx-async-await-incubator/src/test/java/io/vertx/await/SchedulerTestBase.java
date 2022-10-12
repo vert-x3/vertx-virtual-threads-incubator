@@ -44,7 +44,7 @@ public abstract class SchedulerTestBase extends VertxTestBase {
         assertNotSame(current, Thread.currentThread());
         testComplete();
       });
-      scheduler.detach();
+      scheduler.unschedule();
     });
     await();
   }
@@ -53,7 +53,7 @@ public abstract class SchedulerTestBase extends VertxTestBase {
   public void testResumeFromAnotherThread() {
     scheduler.execute(() -> {
       CountDownLatch latch = new CountDownLatch(1);
-      Consumer<Runnable> detach = scheduler.detach();
+      Consumer<Runnable> detach = scheduler.unschedule();
       new Thread(() -> {
         try {
           Thread.sleep(100);
@@ -78,7 +78,7 @@ public abstract class SchedulerTestBase extends VertxTestBase {
   public void testResumeFromContextThread() {
     scheduler.execute(() -> {
       CountDownLatch latch = new CountDownLatch(1);
-      Consumer<Runnable> detach = scheduler.detach();
+      Consumer<Runnable> detach = scheduler.unschedule();
       scheduler.execute(() -> {
         // Make sure the awaiting thread will block on the internal future before resolving it (could use thread status)
         try {
