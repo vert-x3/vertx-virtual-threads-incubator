@@ -1,5 +1,6 @@
 package io.vertx.await;
 
+import io.vertx.benchmarks.VThreadFactory;
 import io.vertx.benchmarks.VirtualThreadBenchmark;
 import org.junit.Test;
 
@@ -15,7 +16,7 @@ public class VirtualThreadTest {
 
     ArrayDeque<Runnable> commands = new ArrayDeque<>();
 
-    ThreadFactory factory = VirtualThreadBenchmark.threadFactory(new Executor() {
+    ThreadFactory factory = VThreadFactory.createThreadFactory(new Executor() {
       @Override
       public void execute(Runnable command) {
         commands.add(command);
