@@ -40,6 +40,9 @@ public class VirtualThreadBenchmark {
   @Param({"1", "10", "100"})
   private int tasks;
 
+  @Param({"1", "10"})
+  private int parks;
+
   @Param({"0", "1", "10", "100"})
   private int work;
 
@@ -107,8 +110,9 @@ public class VirtualThreadBenchmark {
       super.setup(benchmark);
       final int depth = benchmark.stackDepth;
       final int work = benchmark.work;
+      final int parks = benchmark.parks;
       parkTask = () -> {
-        deepStackPark(depth, work);
+        deepStackPark(depth, work, parks);
       };
       parkedThreads = new Thread[count];
     }
@@ -129,14 +133,16 @@ public class VirtualThreadBenchmark {
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-    private static void deepStackPark(int depth, int work) {
+    private static void deepStackPark(int depth, int work, int count) {
       depth--;
       if (depth > 0) {
-        deepStackPark(depth, work);
+        deepStackPark(depth, work, count);
       } else {
-        LockSupport.park();
-        if (work > 0) {
-          Blackhole.consumeCPU(work);
+        for (int i = 0; i < count; i++) {
+          LockSupport.park();
+          if (work > 0) {
+            Blackhole.consumeCPU(work);
+          }
         }
       }
     }
@@ -163,8 +169,15 @@ public class VirtualThreadBenchmark {
     exe.submitParkedVirtualThreads();
     // will make them to hit park
     exe.executeTasks();
-    exe.unpark();
-    exe.executeTasks();
+    // using a different method to help while reading profiling data
+    unparkAndResume(exe);
+  }
+
+  private void unparkAndResume(ParkingTaskInlineExecutor exe) {
+    for (int i = 0; i < parks; i++) {
+      exe.unpark();
+      exe.executeTasks();
+    }
   }
 
   // baseline
