@@ -11,25 +11,10 @@
 
 package io.vertx.benchmarks;
 
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.BenchmarkMode;
-import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Mode;
-import org.openjdk.jmh.annotations.OutputTimeUnit;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Threads;
-import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayDeque;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
@@ -37,8 +22,8 @@ import java.util.concurrent.locks.LockSupport;
 /**
  * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
  */
-@Warmup(iterations = 5, time = 3)
-@Measurement(iterations = 5, time = 3)
+@Warmup(iterations = 10, time = 1)
+@Measurement(iterations = 5, timeUnit = TimeUnit.MILLISECONDS, time = 200)
 @Threads(1)
 @BenchmarkMode(Mode.AverageTime)
 @Fork(value = 1, jvmArgs = {
@@ -49,99 +34,143 @@ import java.util.concurrent.locks.LockSupport;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @State(Scope.Thread)
 public class VirtualThreadBenchmark {
+  @Param({"1", "10", "100"})
+  private int stackDepth;
 
-  private  static final boolean ok;
-  private static final MethodHandle virtualThreadFactory;
+  @Param({"1", "10", "100"})
+  private int tasks;
 
-  static {
-    boolean isOk = false;
-    MethodHandle vtf = null;
-    try {
-      MethodHandles.Lookup thr = MethodHandles.privateLookupIn(Thread.class, MethodHandles.lookup());
-      Class<?> vtbClass = Class.forName("java.lang.ThreadBuilders$VirtualThreadBuilder", false, null);
-      vtf = thr.findConstructor(vtbClass, MethodType.methodType(void.class, Executor.class));
-      // create efficient transformer
-      vtf = vtf.asType(MethodType.methodType(Thread.Builder.OfVirtual.class, Executor.class));
-      isOk = true;
-    } catch (Exception | Error e) {
-      // no good
-      System.err.println("Failed to initialize: " + e);
-    }
-    ok = isOk;
-    virtualThreadFactory = vtf;
-  }
+  @Param({"0", "1", "10", "100"})
+  private int work;
 
-  public static ThreadFactory threadFactory(Executor carrier) {
-    try {
-      Thread.Builder.OfVirtual ov = (Thread.Builder.OfVirtual) virtualThreadFactory.invokeExact(carrier);
-      return ov.factory();
-    } catch (RuntimeException | Error e) {
-      throw e;
-    } catch (Throwable e) {
-      throw new UndeclaredThrowableException(e);
-    }
-  }
+  @State(Scope.Thread)
+  public static class InlineExecutor {
+    private ArrayDeque<Runnable> tasks;
+    protected ThreadFactory threadFactory;
+    protected Runnable deepStackFooTask;
 
-  @org.openjdk.jmh.annotations.State(Scope.Thread)
-  public static class State1 {
-
-    ArrayDeque<Runnable> tasks = new ArrayDeque<>();
-    ThreadFactory threadFactory;
-    Runnable th;
+    protected int count;
 
     @Setup
-    public void setup(Blackhole bh) {
-      threadFactory = threadFactory(task -> {
-        tasks.addLast(task);
-      });
-      th = () -> bh.consume(0);
+    public void setup(VirtualThreadBenchmark benchmark) {
+      tasks = new ArrayDeque<>();
+      final ArrayDeque<Runnable> capturedTasks = this.tasks;
+      threadFactory = VThreadFactory.createThreadFactory(capturedTasks::addLast);
+      count = benchmark.tasks;
+      final int depth = benchmark.stackDepth;
+      final int work = benchmark.work;
+      deepStackFooTask = () -> {
+        deepStackFoo(depth, work);
+      };
+    }
+
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+    private static void deepStackFoo(int depth, int work) {
+      depth--;
+      if (depth > 0) {
+        deepStackFoo(depth, work);
+      } else if (work > 0) {
+        Blackhole.consumeCPU(work);
+      }
+    }
+
+    public void submitTasks() {
+      for (int i = 0; i < count; i++) {
+        tasks.addLast(deepStackFooTask);
+      }
+    }
+
+    public void submitVirtualThreads() {
+      final ThreadFactory threadFactory = this.threadFactory;
+      for (int i = 0; i < count; i++) {
+        threadFactory.newThread(deepStackFooTask).start();
+      }
+    }
+
+    public void executeTasks() {
+      final ArrayDeque<Runnable> tasks = this.tasks;
+      Runnable task;
+      while ((task = tasks.poll()) != null) {
+        task.run();
+      }
     }
   }
 
-  @Benchmark
-  public void execute1(State1 state) {
-    Thread thread = state.threadFactory.newThread(state.th);
-    thread.start();
-    Runnable task;
-    while ((task = state.tasks.poll()) != null) {
-      task.run();
-    }
-  }
+  @State(Scope.Thread)
+  public static class ParkingTaskInlineExecutor extends InlineExecutor {
+    private Runnable parkTask;
+    private Thread[] parkedThreads;
 
-  @org.openjdk.jmh.annotations.State(Scope.Thread)
-  public static class State2 {
-
-    ArrayDeque<Runnable> tasks = new ArrayDeque<>();
-    Thread thread;
-
+    @Override
     @Setup
-    public void setup(Blackhole bh) {
-      ThreadFactory threadFactory = threadFactory(task -> {
-        tasks.addLast(task);
-      });
-      thread = threadFactory.newThread(() -> {
-        while (true) {
-          LockSupport.park();
-          bh.consume(0);
+    public void setup(VirtualThreadBenchmark benchmark) {
+      super.setup(benchmark);
+      final int depth = benchmark.stackDepth;
+      final int work = benchmark.work;
+      parkTask = () -> {
+        deepStackPark(depth, work);
+      };
+      parkedThreads = new Thread[count];
+    }
+
+    public void submitParkedVirtualThreads() {
+      final ThreadFactory threadFactory = this.threadFactory;
+      for (int i = 0; i < count; i++) {
+        parkedThreads[i] = threadFactory.newThread(parkTask);
+        parkedThreads[i].start();
+      }
+    }
+
+    public void unpark() {
+      for (int i = 0; i < count; i++) {
+        LockSupport.unpark(parkedThreads[i]);
+        parkedThreads[i] = null;
+      }
+    }
+
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+    private static void deepStackPark(int depth, int work) {
+      depth--;
+      if (depth > 0) {
+        deepStackPark(depth, work);
+      } else {
+        LockSupport.park();
+        if (work > 0) {
+          Blackhole.consumeCPU(work);
         }
-      });
-      thread.start();
-      tasks.poll().run(); // park the virtual thread
+      }
     }
   }
 
+  /**
+   * This benchmark is measuring the cost of creating N virtual threads with a specified stack
+   * depth and executing them right after.<br>
+   * This is a simulation of using an event loop thread as carrier thread and spawning v threads
+   * from within it to be picked and executed by it later.
+   */
   @Benchmark
-  public void execute2(State2 state) {
-    LockSupport.unpark(state.thread);
-    Runnable task;
-    while ((task = state.tasks.poll()) != null) {
-      task.run();
-    }
+  public void spawnVirtualThreads(InlineExecutor exe) {
+    exe.submitVirtualThreads();
+    exe.executeTasks();
+  }
+
+  /**
+   * This benchmark is measuring the cost of creating N parking virtual threads with a specified stack
+   * depth, unparking and executing them right after.
+   */
+  @Benchmark
+  public void spawnParkingVirtualThreads(ParkingTaskInlineExecutor exe) {
+    exe.submitParkedVirtualThreads();
+    // will make them to hit park
+    exe.executeTasks();
+    exe.unpark();
+    exe.executeTasks();
   }
 
   // baseline
   @Benchmark
-  public void execute3(Blackhole bh) {
-    bh.consume(0);
+  public void spawnRunnables(InlineExecutor exe) {
+    exe.submitTasks();
+    exe.executeTasks();
   }
 }
