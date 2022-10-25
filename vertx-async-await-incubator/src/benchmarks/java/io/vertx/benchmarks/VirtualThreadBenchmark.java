@@ -133,12 +133,12 @@ public class VirtualThreadBenchmark {
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-    private static void deepStackPark(int depth, int work, int count) {
+    private static void deepStackPark(int depth, int work, int parks) {
       depth--;
       if (depth > 0) {
-        deepStackPark(depth, work, count);
+        deepStackPark(depth, work, parks);
       } else {
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < parks; i++) {
           LockSupport.park();
           if (work > 0) {
             Blackhole.consumeCPU(work);
