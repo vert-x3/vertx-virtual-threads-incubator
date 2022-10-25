@@ -6,13 +6,15 @@ import io.vertx.web.sync.Router;
 import io.vertx.web.sync.RouterOptions;
 import io.vertx.web.sync.WebHandler;
 
+import java.util.Arrays;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class RouterImpl implements Router {
 
   private final RouterOptions opts;
-  private final Map<HttpMethod, Node> trees;
+  private final Map<HttpMethod, CTrie<WebHandler>> trees;
 
   public RouterImpl(RouterOptions opts) {
     if (opts.getPrefix() != null && opts.getPrefix().charAt(0) != '/') {
@@ -30,21 +32,24 @@ public class RouterImpl implements Router {
     }
 
     if (!trees.containsKey(method)) {
-      trees.put(method, new Node());
+      trees.put(method, new CTrie<>());
     }
 
     if (opts.getPrefix() != null) {
       path = opts.getPrefix() + path;
     }
 
-    trees.get(method).addRoute(path, handlers);
+    final CTrie<WebHandler> values = trees.get(method);
+    for (WebHandler h : handlers) {
+      values.add(path, h);
+    }
 
     return this;
   }
 
-  private WebHandler[] find(RoutingContextInternal ctx) {
+  private LList<WebHandler> find(RoutingContextInternal ctx) {
     final HttpMethod verb = ctx.method();
-    final Node tree = trees.get(verb);
+    final CTrie<WebHandler> tree = trees.get(verb);
     if (tree != null) {
       return tree.search(ctx);
     }
@@ -56,7 +61,7 @@ public class RouterImpl implements Router {
   public void handle(HttpServerRequest req) {
     final RoutingContextImpl ctx = new RoutingContextImpl(req);
 
-    final WebHandler[] needle = find(ctx);
+    final LList<WebHandler> needle = find(ctx);
 
     if (needle == null) {
 //      final Handler<Context> handle405 = opts.getMethodNotAllowedHandler();
@@ -78,20 +83,21 @@ public class RouterImpl implements Router {
 //        }
 //      }
     } else {
-      for (WebHandler handler : needle) {
+      needle.forEach(handler -> {
         try {
           switch (handler.handle(ctx)) {
             case NEXT:
-              continue;
+              return true;
             case END:
-              return;
+              return false;
             default:
               throw new IllegalStateException("Not Implemented");
           }
         } catch (RuntimeException e) {
           e.printStackTrace();
+          return false;
         }
-      }
+      });
     }
   }
 }
