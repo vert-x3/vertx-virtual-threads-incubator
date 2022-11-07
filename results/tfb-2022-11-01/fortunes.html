@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Perflab results</title>
+  <style>
+
+    body {
+      font-family: monospace;
+      font-size: 12pt;
+    }
+
+    em {
+      font-style: italic;
+    }
+
+    nav a {
+      color: blue;
+    }
+
+    nav a:visited {
+      color: blue;
+    }
+
+    div.table {
+      overflow-x: auto;
+    }
+
+    table {
+      border: 1px solid;
+      border-collapse: collapse;
+      border-spacing: 0;
+      table-layout: fixed;
+      word-wrap: break-word;
+      caption-side: bottom;
+      font-size: 10pt;
+    }
+
+    th {
+      border: 1px solid;
+      width: 100px;
+    }
+
+    td {
+      border: 1px solid;
+      text-align: right;
+    }
+
+    caption {
+      margin-top: 1em;
+      font-style: italic;
+    }
+
+    div#chart {
+      width: 1400px;
+      height: 1000px;
+    }
+
+  </style>
+
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script type="application/javascript">
+
+    function round(num) {
+      return Math.round((num + Number.EPSILON) * 100) / 100
+    }
+
+    function average(values) {
+      let total = 0;
+      for (const value of values) {
+        total += value;
+      }
+      return round(total / values.length);
+    }
+
+    function standardDeviation(values, average) {
+      let total = 0;
+      for (const value of values) {
+        total += (value - average) * (value - average);
+      }
+      return round(Math.sqrt(total / (values.length - 1)));
+    }
+
+    function compileTemplate(hb, id) {
+      return hb.compile(document.querySelector(id).innerHTML);
+    }
+
+  </script>
+</head>
+
+<body>
+
+<script id="title-template" type="text/x-handlebars">
+  <h1><em>{{benchmark}}</em> benchmark results</h1>
+</script>
+
+<script id="nav-template" type="text/x-handlebars">
+  <h2>Summary</h2>
+  <ul>
+    {{#each branches}}
+      <li><a href="#{{this}}">Results for branch <em>{{this}}</em></a></li>
+    {{/each}}
+    <li><a href="#chart">Chart</a></li>
+  </ul>
+</script>
+
+<script id="table-template" type="text/x-handlebars">
+  <h3>Results for branch <em>{{branch}}</em></h3>
+  <table>
+    <caption>{{branch}} - {{benchmark}}</caption>
+    <thead>
+    <tr>
+      <th>&nbsp;</th>
+      {{#each iterations}}
+        {{#if @first}}
+          {{#each values}}
+            <th>{{inc @index}}</th>
+          {{/each}}
+        {{/if}}
+      {{/each}}
+      <th>Avg</th>
+      <th>Stddev</th>
+      <th>Rel Stddev</th>
+      <th>Min</th>
+      <th>Max</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{#each iterations}}
+      <tr>
+        <th>{{concurrency}}</th>
+        {{#each values}}
+          <td>{{this}}</td>
+        {{/each}}
+        <td>{{avg}}</td>
+        <td>{{stddev}}</td>
+        <td>{{relstddev}}%</td>
+        <td>{{min}}</td>
+        <td>{{max}}</td>
+      </tr>
+    {{/each}}
+    </tbody>
+  </table>
+</script>
+
+<script id="chart-template" type="text/x-handlebars">
+  <h3><em>{{benchmark}}</em> benchmark results chart</h3>
+</script>
+
+<script id="results" type="application/json">
+{
+   "benchmark" : "fortunes",
+   "data" : [
+      {
+         "branch" : "master",
+         "iterations" : [
+            {
+               "concurrency" : 16,
+               "values" : [
+                  3453869,
+                  3526833,
+                  3382548,
+                  3496009,
+                  3336056
+               ]
+            },
+            {
+               "concurrency" : 32,
+               "values" : [
+                  5052204,
+                  5143886,
+                  5031618,
+                  5196853,
+                  5004212
+               ]
+            },
+            {
+               "concurrency" : 64,
+               "values" : [
+                  6258416,
+                  6356517,
+                  6300744,
+                  6375145,
+                  6268749
+               ]
+            },
+            {
+               "concurrency" : 128,
+               "values" : [
+                  7314191,
+                  7514271,
+                  7405501,
+                  7321550,
+                  7339425
+               ]
+            },
+            {
+               "concurrency" : 256,
+               "values" : [
+                  8466601,
+                  8635611,
+                  8429364,
+                  8421261,
+                  8639500
+               ]
+            }
+         ]
+      },
+      {
+         "branch" : "virtual-threads",
+         "iterations" : [
+            {
+               "concurrency" : 16,
+               "values" : [
+                  2495755,
+                  2507480,
+                  2673117,
+                  2487261,
+                  2460369
+               ]
+            },
+            {
+               "concurrency" : 32,
+               "values" : [
+                  4113774,
+                  4128395,
+                  4190407,
+                  4205534,
+                  4154629
+               ]
+            },
+            {
+               "concurrency" : 64,
+               "values" : [
+                  5618520,
+                  5765954,
+                  5718953,
+                  5841347,
+                  5680262
+               ]
+            },
+            {
+               "concurrency" : 128,
+               "values" : [
+                  6946308,
+                  7094046,
+                  7296019,
+                  7003107,
+                  2212
+               ]
+            },
+            {
+               "concurrency" : 256,
+               "values" : [
+                  8200059,
+                  8363659,
+                  8355506,
+                  8314771,
+                  3600
+               ]
+            }
+         ]
+      },
+      {
+         "branch" : "virtual-threads-event-loop",
+         "iterations" : [
+            {
+               "concurrency" : 16,
+               "values" : [
+                  2396207,
+                  2449706,
+                  2399156,
+                  2517911,
+                  2504259
+               ]
+            },
+            {
+               "concurrency" : 32,
+               "values" : [
+                  3916073,
+                  3968113,
+                  3947768,
+                  4013457,
+                  4009421
+               ]
+            },
+            {
+               "concurrency" : 64,
+               "values" : [
+                  5491089,
+                  5508463,
+                  5606834,
+                  5479878,
+                  5555726
+               ]
+            },
+            {
+               "concurrency" : 128,
+               "values" : [
+                  6930265,
+                  6894375,
+                  6903392,
+                  6794612,
+                  6878637
+               ]
+            },
+            {
+               "concurrency" : 256,
+               "values" : [
+                  7786725,
+                  7952222,
+                  7854645,
+                  7836542,
+                  7815404
+               ]
+            }
+         ]
+      }
+   ]
+}
+</script>
+
+<script id="results-sample" type="application/json">
+  {
+    "benchmark" : "plaintext",
+    "data" : [
+      {
+        "branch" : "oct22-4.1.4",
+        "iterations" : [
+          {
+            "concurrency" : 256,
+            "values" : [
+              156727760,
+              155759616,
+              157254816,
+              156559792,
+              159958480,
+              158659072,
+              158183968,
+              159137296,
+              165708144,
+              164706752
+            ]
+          },
+          {
+            "concurrency" : 1024,
+            "values" : [
+              199564272,
+              197151808,
+              194545232,
+              193772416,
+              198594704,
+              198366976,
+              196662720,
+              195458960,
+              196324768,
+              192449888
+            ]
+          },
+          {
+            "concurrency" : 4096,
+            "values" : [
+              193034144,
+              189667440,
+              186151984,
+              186435504,
+              192040944,
+              192837712,
+              188253760,
+              187313312,
+              189127824,
+              184370528
+            ]
+          },
+          {
+            "concurrency" : 16384,
+            "values" : [
+              185129104,
+              183016688,
+              179138992,
+              180670160,
+              184818832,
+              183895152,
+              181635008,
+              181818768,
+              182377568,
+              177928880
+            ]
+          }
+        ]
+      },
+      {
+        "branch" : "oct22-4.3.3",
+        "iterations" : [
+          {
+            "concurrency" : 256,
+            "values" : [
+              160214704,
+              155017760,
+              160644512,
+              156656080,
+              161479200,
+              162079344,
+              157070352,
+              160220640,
+              157914496,
+              156130368
+            ]
+          },
+          {
+            "concurrency" : 1024,
+            "values" : [
+              191760816,
+              193519840,
+              189691824,
+              190042272,
+              194549120,
+              189168112,
+              186736704,
+              189591728,
+              198427296,
+              189589936
+            ]
+          },
+          {
+            "concurrency" : 4096,
+            "values" : [
+              184101344,
+              185671952,
+              182230672,
+              182944592,
+              186202864,
+              182178928,
+              180546960,
+              182449008,
+              190922912,
+              183281776
+            ]
+          },
+          {
+            "concurrency" : 16384,
+            "values" : [
+              178642224,
+              178672128,
+              176392016,
+              176981712,
+              180903232,
+              176566112,
+              174267152,
+              176784800,
+              183117024,
+              176189008
+            ]
+          }
+        ]
+      },
+      {
+        "branch" : "oct22-4.3.4",
+        "iterations" : [
+          {
+            "concurrency" : 256,
+            "values" : [
+              157115008,
+              156171248,
+              160244336,
+              157100896,
+              158777696,
+              159395344,
+              162272144,
+              160066992,
+              160840400,
+              161439840
+            ]
+          },
+          {
+            "concurrency" : 1024,
+            "values" : [
+              194645280,
+              185893600,
+              190015376,
+              194778352,
+              185906096,
+              189741680,
+              193831760,
+              200660512,
+              194202848,
+              192093808
+            ]
+          },
+          {
+            "concurrency" : 4096,
+            "values" : [
+              185596816,
+              179253616,
+              182262128,
+              186692976,
+              179245056,
+              182426032,
+              185597136,
+              193070048,
+              186618320,
+              184398240
+            ]
+          },
+          {
+            "concurrency" : 16384,
+            "values" : [
+              179799536,
+              173211018,
+              177589328,
+              180694416,
+              172679936,
+              175337776,
+              180338800,
+              183618800,
+              180874704,
+              179009472
+            ]
+          }
+        ]
+      }
+    ]
+  }
+</script>
+
+<script type="application/javascript">
+
+  let resultsText = document.querySelector("#results").innerHTML;
+  if (resultsText.trim().length === 0) {
+    resultsText = document.querySelector("#results-sample").innerHTML;
+  }
+  const results = JSON.parse(resultsText);
+
+  const branches = results.data.map(d => d.branch);
+  for (const data of results.data) {
+    for (const iteration of data.iterations) {
+      iteration.avg = average(iteration.values);
+      iteration.stddev = standardDeviation(iteration.values, iteration.avg);
+      iteration.relstddev = round(100 * (iteration.stddev / iteration.avg));
+      iteration.min = Math.min(...iteration.values);
+      iteration.max = Math.max(...iteration.values);
+    }
+  }
+
+  Handlebars.registerHelper("inc", value => parseInt(value) + 1);
+
+  document.title = `${results.benchmark} benchmark results`
+
+  const titleTemplateFunc = compileTemplate(Handlebars, "#title-template");
+  const titleElem = document.createElement("div");
+  titleElem.innerHTML = titleTemplateFunc({benchmark: results.benchmark});
+  document.body.appendChild(titleElem);
+
+  const navTemplateFunc = compileTemplate(Handlebars, "#nav-template");
+  const navElem = document.createElement("nav");
+  navElem.innerHTML = navTemplateFunc({branches: branches});
+  document.body.appendChild(navElem);
+
+  const tableTemplateFunc = compileTemplate(Handlebars, "#table-template");
+  for (const data of results.data) {
+    const tableElem = document.createElement("div");
+    tableElem.id = data.branch;
+    tableElem.className = "table";
+    tableElem.innerHTML = tableTemplateFunc({benchmark: results.benchmark, ...data});
+    document.body.appendChild(tableElem);
+  }
+
+  const chartTemplateFunc = compileTemplate(Handlebars, "#chart-template");
+  const chartElem = document.createElement("div");
+  chartElem.innerHTML = chartTemplateFunc({benchmark: results.benchmark});
+  const charTarget = document.createElement("div");
+  charTarget.id = "chart";
+  chartElem.appendChild(charTarget);
+  document.body.appendChild(chartElem);
+
+  google.charts.load("current", {"packages": ["corechart"]});
+  google.charts.setOnLoadCallback(function () {
+
+    const data = new google.visualization.DataTable();
+
+    data.addColumn("string", "Concurrency");
+    branches.forEach(b => {
+      data.addColumn("number", b);
+      for (let i = 0; i < results.data[0].iterations[0].values.length; i++) {
+        data.addColumn({id: `value${i.toString()}`, type: "number", role: "interval"});
+      }
+    });
+
+    for (let i = 0; i < results.data[0].iterations.length; i++) {
+      const row = [];
+      for (const data of results.data) {
+        const iteration = data.iterations[i];
+        if (row.length === 0) {
+          row.push(iteration.concurrency.toString());
+        }
+        row.push(iteration.avg);
+        const sorted = new Array(...iteration.values).sort();
+        for (let i = 0; i < sorted.length; i++) {
+          row.push(sorted[i]);
+        }
+      }
+      data.addRow(row);
+    }
+
+    const options = {
+      title: `Throughput in '${results.benchmark}' benchmark`,
+      vAxis: {
+        viewWindowMode: "explicit",
+        viewWindow: {min: 0},
+        title: "Requests/sec"
+      },
+      hAxis: {
+        title: "Concurrency"
+      },
+      intervals: {style: "bars", color: "#333333"},
+      fontName: "monospace"
+    };
+
+    const chart = new google.visualization.ColumnChart(document.getElementById("chart"));
+    chart.draw(data, options);
+  });
+
+</script>
+
+</body>
+
+</html>

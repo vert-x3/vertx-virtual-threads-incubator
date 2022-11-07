@@ -48,18 +48,18 @@ public class VirtualThreadBenchmark {
 
   @State(Scope.Thread)
   public static class InlineExecutor {
-    private ArrayDeque<Runnable> tasks;
+    private ArrayDeque<Runnable> taskQueue;
     protected ThreadFactory threadFactory;
     protected Runnable deepStackFooTask;
 
-    protected int count;
+    protected int tasks;
 
     @Setup
     public void setup(VirtualThreadBenchmark benchmark) {
-      tasks = new ArrayDeque<>();
-      final ArrayDeque<Runnable> capturedTasks = this.tasks;
+      taskQueue = new ArrayDeque<>();
+      final ArrayDeque<Runnable> capturedTasks = this.taskQueue;
       threadFactory = VThreadFactory.createThreadFactory(capturedTasks::addLast);
-      count = benchmark.tasks;
+      tasks = benchmark.tasks;
       final int depth = benchmark.stackDepth;
       final int work = benchmark.work;
       deepStackFooTask = () -> {
@@ -78,20 +78,20 @@ public class VirtualThreadBenchmark {
     }
 
     public void submitTasks() {
-      for (int i = 0; i < count; i++) {
-        tasks.addLast(deepStackFooTask);
+      for (int i = 0; i < tasks; i++) {
+        taskQueue.addLast(deepStackFooTask);
       }
     }
 
     public void submitVirtualThreads() {
       final ThreadFactory threadFactory = this.threadFactory;
-      for (int i = 0; i < count; i++) {
+      for (int i = 0; i < tasks; i++) {
         threadFactory.newThread(deepStackFooTask).start();
       }
     }
 
     public void executeTasks() {
-      final ArrayDeque<Runnable> tasks = this.tasks;
+      final ArrayDeque<Runnable> tasks = this.taskQueue;
       Runnable task;
       while ((task = tasks.poll()) != null) {
         task.run();
@@ -114,19 +114,19 @@ public class VirtualThreadBenchmark {
       parkTask = () -> {
         deepStackPark(depth, work, parks);
       };
-      parkedThreads = new Thread[count];
+      parkedThreads = new Thread[tasks];
     }
 
     public void submitParkedVirtualThreads() {
       final ThreadFactory threadFactory = this.threadFactory;
-      for (int i = 0; i < count; i++) {
+      for (int i = 0; i < tasks; i++) {
         parkedThreads[i] = threadFactory.newThread(parkTask);
         parkedThreads[i].start();
       }
     }
 
     public void unpark() {
-      for (int i = 0; i < count; i++) {
+      for (int i = 0; i < tasks; i++) {
         LockSupport.unpark(parkedThreads[i]);
         parkedThreads[i] = null;
       }
