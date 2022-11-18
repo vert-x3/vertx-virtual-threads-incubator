@@ -14,7 +14,7 @@
   <packaging>pom</packaging>
 
   <properties>
-    <vertx.version>4.3.4</vertx.version>
+    <vertx.version>4.3.5</vertx.version>
   </properties>
 
   <modules>
