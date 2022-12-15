@@ -247,7 +247,7 @@ public abstract class VirtualThreadContextTestBase extends VertxTestBase {
         return;
       }
 
-      fail();
+      fail("should have interrupted");
     });
 
     await();
