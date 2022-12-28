@@ -8,8 +8,12 @@ import io.vertx.await.impl.DefaultScheduler;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxException;
 import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.impl.NoStackTraceThrowable;
 
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.locks.Lock;
 
@@ -58,7 +62,7 @@ public class Async {
     ctx.lock(lock);
   }
 
-  public static <T> T await(CompletionStage<T> future) {
+  public static <T> T await(CompletableFuture<T> future) {
     VirtualThreadContext ctx = virtualThreadContext();
     return ctx.await(future);
   }

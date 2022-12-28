@@ -12,6 +12,7 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class VirtualThreadContextTestBase extends VertxTestBase {
@@ -110,13 +111,48 @@ public abstract class VirtualThreadContextTestBase extends VertxTestBase {
   }
 
   @Test
+  public void testImmediateCompletedFuture() {
+    var flag = new AtomicInteger();
+    async.run(v -> {
+      var completed = Future.succeededFuture("HELLO");
+      vertx.getOrCreateContext().runOnContext(v2 -> {
+        assertEquals(2, flag.incrementAndGet());
+        testComplete();
+      });
+      Async.await(completed);
+      assertEquals(1, flag.incrementAndGet());
+    });
+    await();
+  }
+
+  @Test
+  public void testImmediateFailedFuture() {
+    var flag = new AtomicInteger();
+    async.run(v -> {
+      var completed = Future.failedFuture("FAILED");
+      vertx.getOrCreateContext().runOnContext(v2 -> {
+        assertEquals(2, flag.incrementAndGet());
+        testComplete();
+      });
+      try {
+        Async.await(completed);
+      } catch (Throwable t) {
+        assertEquals(1, flag.incrementAndGet());
+        return;
+      }
+      fail("shouldn't reach");
+    });
+    await();
+  }
+
+  @Test
   public void testDuplicateUseSameThread() {
     int num = 1000;
     waitFor(num);
     async.run(v -> {
       ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
       Thread th = Thread.currentThread();
-      for (int i = 0;i < num;i++) {
+      for (int i = 0; i < num; i++) {
         ContextInternal duplicate = context.duplicate();
         duplicate.runOnContext(v2 -> {
           // assertSame(th, Thread.currentThread());
@@ -135,7 +171,7 @@ public abstract class VirtualThreadContextTestBase extends VertxTestBase {
       ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
       Object lock = new Object();
       List<Promise<Void>> list = new ArrayList<>();
-      for (int i = 0;i < num;i++) {
+      for (int i = 0; i < num; i++) {
         ContextInternal duplicate = context.duplicate();
         duplicate.runOnContext(v2 -> {
           Promise<Void> promise = duplicate.promise();

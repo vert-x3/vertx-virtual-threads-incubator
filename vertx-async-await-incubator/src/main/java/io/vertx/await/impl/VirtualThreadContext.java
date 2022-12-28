@@ -158,7 +158,14 @@ public class VirtualThreadContext extends ContextBase {
     }
   }
 
-  public <T> T await(CompletionStage<T> fut) {
+  public <T> T await(CompletableFuture<T> fut) {
+    if (fut.state() == java.util.concurrent.Future.State.SUCCESS) {
+      return fut.resultNow();
+    }
+    if (fut.state() == java.util.concurrent.Future.State.FAILED) {
+      throwAsUnchecked(fut.exceptionNow());
+      return null;
+    }
     inThread.remove();
     Consumer<Runnable> cont = scheduler.unschedule();
     CompletableFuture<T> latch = new CompletableFuture<>();
