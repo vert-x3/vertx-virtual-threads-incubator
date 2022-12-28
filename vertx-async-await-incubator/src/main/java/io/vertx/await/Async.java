@@ -1,20 +1,16 @@
 package io.vertx.await;
 
 import io.netty.channel.EventLoop;
+import io.vertx.await.impl.DefaultScheduler;
 import io.vertx.await.impl.EventLoopScheduler;
 import io.vertx.await.impl.Scheduler;
 import io.vertx.await.impl.VirtualThreadContext;
-import io.vertx.await.impl.DefaultScheduler;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxException;
 import io.vertx.core.impl.ContextInternal;
-import io.vertx.core.impl.NoStackTraceThrowable;
 
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.locks.Lock;
 
 public class Async {
