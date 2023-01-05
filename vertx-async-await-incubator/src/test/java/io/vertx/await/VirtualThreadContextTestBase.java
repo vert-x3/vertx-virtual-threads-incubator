@@ -12,7 +12,10 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public abstract class VirtualThreadContextTestBase extends VertxTestBase {
 
@@ -116,7 +119,7 @@ public abstract class VirtualThreadContextTestBase extends VertxTestBase {
     async.run(v -> {
       ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
       Thread th = Thread.currentThread();
-      for (int i = 0;i < num;i++) {
+      for (int i = 0; i < num; i++) {
         ContextInternal duplicate = context.duplicate();
         duplicate.runOnContext(v2 -> {
           // assertSame(th, Thread.currentThread());
@@ -135,7 +138,7 @@ public abstract class VirtualThreadContextTestBase extends VertxTestBase {
       ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
       Object lock = new Object();
       List<Promise<Void>> list = new ArrayList<>();
-      for (int i = 0;i < num;i++) {
+      for (int i = 0; i < num; i++) {
         ContextInternal duplicate = context.duplicate();
         duplicate.runOnContext(v2 -> {
           Promise<Void> promise = duplicate.promise();
@@ -221,5 +224,77 @@ public abstract class VirtualThreadContextTestBase extends VertxTestBase {
       testComplete();
     });
     await();
+  }
+
+
+  protected void testInterruption(Callable<Void> sleeper, boolean assertIsInterrupted) {
+    async.run(v1 -> {
+      var thisThread = Thread.currentThread();
+      vertx.runOnContext(v2 -> thisThread.interrupt());
+      assertFalse(Thread.currentThread().isInterrupted());
+      try {
+        sleeper.call();
+      } catch (InterruptedException e) {
+        assertEquals(thisThread, Thread.currentThread());
+        assertTrue(Thread.currentThread().isVirtual());
+        if (assertIsInterrupted) {
+          assertTrue("thread should be interrupted", Thread.currentThread().isInterrupted());
+        }
+        testComplete();
+        return;
+      } catch (Exception e) {
+        fail(e);
+        return;
+      }
+
+      fail("should have interrupted");
+    });
+
+    await();
+  }
+
+  @Test
+  public void testInterruptsVertxSleepAssertInterrupted() throws Exception {
+    testInterruption(() -> {
+      sleepVertxInterruptibly(1000);
+      return null;
+    }, true);
+  }
+
+  @Test
+  public void testInterruptsThreadSleepAssertInterrupted() throws Exception {
+    testInterruption(() -> {
+      Thread.sleep(1000);
+      return null;
+    }, true);
+  }
+
+  @Test
+  public void testInterruptsVertxSleepIgnoreInterruptedStatus() throws Exception {
+    testInterruption(() -> {
+      sleepVertxInterruptibly(1000);
+      return null;
+    }, false);
+  }
+
+  @Test
+  public void testInterruptsThreadSleepIgnoreInterruptedStatus() throws Exception {
+    testInterruption(() -> {
+      Thread.sleep(1000);
+      return null;
+    }, false);
+  }
+
+  private void sleepVertxInterruptibly(long milliseconds) throws InterruptedException {
+    var promise = Promise.<Long>promise();
+    vertx.setTimer(milliseconds, promise::complete);
+    try {
+      Async.await(promise.future());
+    } catch (Throwable t) {
+      if (t.getCause() instanceof InterruptedException interruptedException) {
+        throw interruptedException;
+      }
+      throw t;
+    }
   }
 }
