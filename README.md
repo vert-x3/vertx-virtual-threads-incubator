@@ -6,7 +6,7 @@ Incubator for virtual threads based prototypes.
 
 ## Prerequisites
 
-- [Vert.x 4.3.7](https://vertx.io/docs/4.3.7)
+- [Vert.x 4.4.0](https://vertx.io/docs/4.4.0)
 - Java 19 using preview feature
   - [OpenJDK 19](https://jdk.java.net/19/)
   - [Maven](https://stackoverflow.com/questions/52232681/compile-and-execute-a-jdk-preview-feature-with-maven)
