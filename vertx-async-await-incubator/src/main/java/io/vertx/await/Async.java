@@ -5,6 +5,7 @@ import io.vertx.await.impl.EventLoopScheduler;
 import io.vertx.await.impl.Scheduler;
 import io.vertx.await.impl.VirtualThreadContext;
 import io.vertx.await.impl.DefaultScheduler;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -31,7 +32,13 @@ public class Async {
    * Run a task on a virtual thread
    */
   public void run(Handler<Void> task) {
-    EventLoop eventLoop = vertx.nettyEventLoopGroup().next();
+    Context ctx = vertx.getOrCreateContext();
+    EventLoop eventLoop;
+    if (ctx.isEventLoopContext()) {
+      eventLoop = ((ContextInternal)ctx).nettyEventLoop();
+    } else {
+      throw new IllegalStateException();
+    }
     // Scheduler scheduler = useVirtualEventLoopThreads ? new SchedulerImpl(LoomaniaScheduler2.threadFactory(eventLoop)): new SchedulerImpl(SchedulerImpl.DEFAULT_THREAD_FACTORY);
     Scheduler scheduler = useVirtualEventLoopThreads ? new EventLoopScheduler(eventLoop) : new DefaultScheduler(DefaultScheduler.DEFAULT_THREAD_FACTORY);
     VirtualThreadContext context = VirtualThreadContext.create(vertx, eventLoop, scheduler);

@@ -222,4 +222,20 @@ public abstract class VirtualThreadContextTestBase extends VertxTestBase {
     });
     await();
   }
+
+  @Test
+  public void testFromEventLoop() {
+    ContextInternal elContext = (ContextInternal) vertx.getOrCreateContext();
+    elContext.runOnContext(v1 -> {
+      async.run(v2 -> {
+        Thread thread = Thread.currentThread();
+        assertTrue(thread.isVirtual());
+        ContextInternal context = (ContextInternal) vertx.getOrCreateContext();
+        assertSame(elContext.nettyEventLoop(), context.nettyEventLoop());
+        assertTrue(context instanceof VirtualThreadContext);
+        testComplete();
+      });
+    });
+    await();
+  }
 }
