@@ -1,13 +1,14 @@
 package io.vertx.web.sync.impl;
 
-import io.vertx.web.sync.WebHandler;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.vertx.web.sync.impl.Node.Type.*;
+import static io.vertx.web.sync.impl.CTrie.Type.*;
 
-public class Node {
+public class CTrie<T> {
 
   enum Type {
     STATIC,
@@ -33,22 +34,22 @@ public class Node {
   private Type type;
   private int maxParams;
   private String indices;
-  private List<Node> children;
-  private WebHandler[] handle;
+  private List<CTrie<T>> children;
+  private LList<T> data;
   private int priority;
 
-  Node() {
+  public CTrie() {
     this("", false, STATIC, 0, "", new ArrayList<>(), null, 0);
   }
 
-  private Node(String path, boolean wildChild, Type type, int maxParams, String indices, List<Node> children, WebHandler[] handle, int priority) {
+  private CTrie(String path, boolean wildChild, Type type, int maxParams, String indices, List<CTrie<T>> children, LList<T> data, int priority) {
     this.path = path;
     this.wildChild = wildChild;
     this.type = type;
     this.maxParams = maxParams;
     this.indices = indices;
     this.children = children;
-    this.handle = handle;
+    this.data = data;
     this.priority = priority;
   }
 
@@ -59,7 +60,7 @@ public class Node {
     // Adjust position (move to from)
     int newPos = pos;
     while (newPos > 0 && children.get(newPos - 1).priority < prio) {
-      final Node temp = children.get(newPos);
+      final CTrie<T> temp = children.get(newPos);
       children.set(newPos, children.get(newPos - 1));
       children.set(newPos - 1, temp);
       newPos--;
@@ -77,8 +78,8 @@ public class Node {
     return newPos;
   }
 
-  private void insertChild(int numParams, String path, String fullPath, WebHandler[] handle) {
-    Node n = this;
+  private void insertChild(int numParams, String path, String fullPath, T handle) {
+    CTrie<T> n = this;
     int offset = 0; // Already handled chars of the path
 
     // Find prefix until first wildcard
@@ -116,7 +117,7 @@ public class Node {
           offset = i;
         }
 
-        final Node child = new Node("", false, PARAM, numParams, "", new ArrayList<>(), null, 0);
+        final CTrie<T> child = new CTrie<>("", false, PARAM, numParams, "", new ArrayList<>(), null, 0);
         n.children = new ArrayList<>();
         n.children.add(child);
         n.wildChild = true;
@@ -127,7 +128,7 @@ public class Node {
           n.path = path.substring(offset, end);
           offset = end;
 
-          final Node staticChild = new Node(
+          final CTrie<T> staticChild = new CTrie<>(
             "",
             false,
             STATIC,
@@ -158,7 +159,7 @@ public class Node {
         n.path = path.substring(offset, i);
 
         // first node: catchAll node with empty path
-        final Node catchAllChild = new Node("", true, CATCH_ALL, 1, "", new ArrayList<>(), null, 0);
+        final CTrie<T> catchAllChild = new CTrie<>("", true, CATCH_ALL, 1, "", new ArrayList<>(), null, 0);
         n.children = new ArrayList<>();
         n.children.add(catchAllChild);
         n.indices = path.substring(i, i + 1);
@@ -166,14 +167,14 @@ public class Node {
         n.priority++;
 
         // second node: node holding the variable
-        final Node child = new Node(
+        final CTrie<T> child = new CTrie<>(
           path.substring(i),
           false,
           CATCH_ALL,
           1,
           "",
           new ArrayList<>(),
-          handle,
+          new LList<>(handle),
           1
         );
         n.children = new ArrayList<>();
@@ -185,12 +186,12 @@ public class Node {
 
     // insert remaining path part and handle to the leaf
     n.path = path.substring(offset);
-    n.handle = handle;
+    n.data = new LList<>(handle);
   }
 
 
-  public void addRoute(String path, WebHandler... handle) {
-    Node n = this;
+  public void add(String path, T handle) {
+    CTrie<T> n = this;
     String fullPath = path;
 
     n.priority++;
@@ -216,14 +217,14 @@ public class Node {
 
         // Split edge
         if (i < n.path.length()) {
-          final Node child = new Node(
+          final CTrie<T> child = new CTrie<>(
             n.path.substring(i),
             n.wildChild,
             STATIC,
             0,
             n.indices,
             n.children,
-            n.handle,
+            n.data,
             n.priority - 1
           );
 
@@ -238,7 +239,7 @@ public class Node {
           n.children.add(child);
           n.indices = n.path.substring(i, i + 1);
           n.path = path.substring(0, i);
-          n.handle = null;
+          n.data = null;
           n.wildChild = false;
         }
 
@@ -298,7 +299,7 @@ public class Node {
           // Otherwise insert it
           if (c != ':' && c != '*') {
             n.indices += c;
-            final Node child = new Node(
+            final CTrie<T> child = new CTrie<>(
               "",
               false,
               STATIC,
@@ -316,10 +317,12 @@ public class Node {
           return;
         } else if (i == path.length()) {
           // Make node a (in-path leaf)
-          if (n.handle != null) {
-            throw new IllegalStateException("A handle is already registered for path '" + fullPath + "'");
+          if (n.data != null) {
+            System.out.println("A handle is already registered for path '" + fullPath + "'");
+            n.data.push(handle);
+          } else {
+            n.data = new LList<>(handle);
           }
-          n.handle = handle;
         }
         return;
       }
@@ -332,22 +335,22 @@ public class Node {
 
   }
 
-  public WebHandler[] search(final RoutingContextInternal ctx) {
+  public LList<T> search(final RoutingContextInternal ctx) {
     return search(ctx, true);
   }
 
-  public WebHandler[] lookup(final RoutingContextInternal ctx) {
+  public LList<T> lookup(final RoutingContextInternal ctx) {
     return search(ctx, false);
   }
 
-  private WebHandler[] search(final RoutingContextInternal ctx, boolean updateParams) {
+  private LList<T> search(final RoutingContextInternal ctx, boolean updateParams) {
     String path = ctx.path();
-    Node n = this;
+    CTrie<T> n = this;
 
     walk:
     while (true) {
       if (path.length() > n.path.length()) {
-        if (path.substring(0, n.path.length()).equals(n.path)) {
+        if (path.startsWith(n.path)) {
           path = path.substring(n.path.length());
           // If this node does not have a wildcard child,
           // we can just look up the next child node and continue
@@ -392,35 +395,62 @@ public class Node {
                 return null;
               }
 
-              return n.handle;
+              return n.data;
 
             case CATCH_ALL:
               if (updateParams) {
                 ctx.addParam(n.path.substring(2), path);
               }
-              return n.handle;
+              return n.data;
 
             default:
               throw new RuntimeException("invalid node type");
           }
         }
       } else if (path.equals(n.path)) {
-        return n.handle;
+        return n.data;
       }
 
       return null;
     }
   }
 
-  private void printTree(String prefix) {
-    System.out.println(" " + priority + ":" + maxParams + " " + prefix + path + "[" + children.size() + "] " + handle + " " + wildChild + " " + type);
+  public JsonObject toJson() {
+    final JsonObject json = new JsonObject()
+      .put("path", path)
+      .put("wildChild", wildChild)
+      .put("type", type)
+      .put("maxParams", maxParams)
+      .put("indices", indices);
 
-    for (int l = path.length(); l > 0; l--) {
-      prefix += " ";
+    if (children != null) {
+      JsonArray arr = new JsonArray();
+      json.put("children", arr);
+      for (CTrie<T> trie : children) {
+        arr.add(trie.toJson());
+      }
     }
 
-    for (Node child : children) {
-      child.printTree(prefix);
+    if (data != null) {
+      JsonArray arr = new JsonArray();
+      json.put("data", arr);
+      data.forEach(el -> {
+        arr.add(el.toString());
+      });
+    }
+
+    json.put("priority", priority);
+
+    return json;
+  }
+
+  private void printTree(String prefix) {
+    System.out.println(" " + priority + ":" + maxParams + " " + prefix + path + "[" + children.size() + "] " + data + " " + wildChild + " " + type);
+
+    String indent = " ".repeat(path.length());
+
+    for (CTrie<T> child : children) {
+      child.printTree(indent);
     }
   }
 
