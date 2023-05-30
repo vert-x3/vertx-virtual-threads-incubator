@@ -18,6 +18,7 @@ public class Async {
 
   private final Vertx vertx;
   private final boolean useVirtualEventLoopThreads;
+  private static final String VTHREAD_CTX = "VTHREAD_CTX";
 
   public Async(Vertx vertx) {
     this(vertx, false);
@@ -32,17 +33,21 @@ public class Async {
    * Run a task on a virtual thread
    */
   public void run(Handler<Void> task) {
+    assert !Thread.currentThread().isVirtual();
     Context ctx = vertx.getOrCreateContext();
-    EventLoop eventLoop;
-    if (ctx.isEventLoopContext()) {
-      eventLoop = ((ContextInternal)ctx).nettyEventLoop();
-    } else {
+    if (!ctx.isEventLoopContext()) {
       throw new IllegalStateException();
     }
-    // Scheduler scheduler = useVirtualEventLoopThreads ? new SchedulerImpl(LoomaniaScheduler2.threadFactory(eventLoop)): new SchedulerImpl(SchedulerImpl.DEFAULT_THREAD_FACTORY);
-    Scheduler scheduler = useVirtualEventLoopThreads ? new EventLoopScheduler(eventLoop) : new DefaultScheduler(DefaultScheduler.DEFAULT_THREAD_FACTORY);
-    VirtualThreadContext context = VirtualThreadContext.create(vertx, eventLoop, scheduler);
-    context.runOnContext(task);
+    var unsafeCtx = (ContextInternal) ctx;
+    VirtualThreadContext virtualCtx = unsafeCtx.getLocal(VTHREAD_CTX);
+    if (virtualCtx == null) {
+      EventLoop eventLoop = unsafeCtx.nettyEventLoop();
+      // Scheduler scheduler = useVirtualEventLoopThreads ? new SchedulerImpl(LoomaniaScheduler2.threadFactory(eventLoop)): new SchedulerImpl(SchedulerImpl.DEFAULT_THREAD_FACTORY);
+      Scheduler scheduler = useVirtualEventLoopThreads ? new EventLoopScheduler(eventLoop) : new DefaultScheduler(DefaultScheduler.DEFAULT_THREAD_FACTORY);
+      virtualCtx = VirtualThreadContext.create(vertx, eventLoop, scheduler);
+      unsafeCtx.putLocal(VTHREAD_CTX, virtualCtx);
+    }
+    virtualCtx.runOnContext(task);
   }
 
   private static VirtualThreadContext virtualThreadContext() {
