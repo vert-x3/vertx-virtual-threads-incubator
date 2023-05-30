@@ -30,4 +30,23 @@ public class EventLoopVirtualThreadContextTest extends VirtualThreadContextTestB
     await();
   }
 
+  @Test
+  public void testSuspendFromEventLoop() {
+    vertx.runOnContext(v0 -> {
+      async.run(v1 -> {
+        CompletableFuture<Void> cf = new CompletableFuture<>();
+        vertx.runOnContext(v2 -> {
+          cf.complete(null);
+        });
+        try {
+          cf.get(10, TimeUnit.SECONDS);
+        } catch (Exception e) {
+          fail(e);
+        }
+        testComplete();
+      });
+    });
+    await();
+  }
+
 }

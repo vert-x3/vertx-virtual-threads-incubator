@@ -52,23 +52,29 @@ public class EventLoopScheduler implements Scheduler {
 
   private final ThreadFactory threadFactory;
   private final LinkedList<Runnable> tasks = new LinkedList<>();
-  private boolean flag;
+  private boolean runOnContext;
 
   public EventLoopScheduler(EventLoop carrier) {
     this(command -> {
-      if (carrier.inEventLoop()) {
-        command.run();
-      } else {
-        carrier.execute(command);
-      }
+      execute(carrier, command);
     });
   }
 
-  public EventLoopScheduler(Executor carrier) {
+  private static void execute(EventLoop carrier, Runnable command) {
+    if (carrier.inEventLoop()) {
+      command.run();
+    } else {
+      carrier.execute(command);
+    }
+  }
+
+  private EventLoopScheduler(Executor carrier) {
     threadFactory = threadFactory(command -> {
-      if (flag) {
+      if (runOnContext) {
         tasks.addLast(command);
       } else {
+        // "external" continuations are prioritized and placed
+        // upfront, to be consumed first
         tasks.addFirst(command);
       }
       carrier.execute(() -> {
@@ -84,11 +90,11 @@ public class EventLoopScheduler implements Scheduler {
 
   public void execute(Runnable runnable) {
     Thread thread = threadFactory.newThread(runnable);
-    flag = true;
+    runOnContext = true;
     try {
       thread.start();
     } finally {
-      flag = false;
+      runOnContext = false;
     }
   }
 }

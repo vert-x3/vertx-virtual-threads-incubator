@@ -4,20 +4,10 @@ import io.netty.channel.EventLoop;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.impl.CloseFuture;
-import io.vertx.core.impl.ContextBase;
-import io.vertx.core.impl.ContextInternal;
-import io.vertx.core.impl.Deployment;
-import io.vertx.core.impl.VertxImpl;
-import io.vertx.core.impl.VertxInternal;
-import io.vertx.core.impl.WorkerPool;
+import io.vertx.core.impl.*;
 
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
@@ -32,7 +22,11 @@ public class VirtualThreadContext extends ContextBase {
   }
 
   private final Scheduler scheduler;
-  private final ThreadLocal<Boolean> inThread = new ThreadLocal<>();
+
+  // Use this instead of a ThreadLocal because must friendly with Virtual Threads!
+  // ideally we should use https://github.com/JCTools/JCTools/blob/master/jctools-core/src/main/java/org/jctools/maps/NonBlockingHashMap.java
+  // which doesn't use any synchronized op!
+  private final ConcurrentHashSet<Thread> inThread = new ConcurrentHashSet<>();
 
   VirtualThreadContext(VertxInternal vertx,
                        EventLoop eventLoop,
@@ -97,38 +91,39 @@ public class VirtualThreadContext extends ContextBase {
   private <T> void run(ContextInternal ctx, T value, Handler<T> task) {
     Objects.requireNonNull(task, "Task handler must not be null");
     scheduler.execute(() -> {
-      inThread.set(true);
+      var current = Thread.currentThread();
+      inThread.add(current);
       try {
         ctx.dispatch(value, task);
       } finally {
-        inThread.remove();
+        inThread.remove(current);
       }
     });
   }
 
   private <T> void execute2(T argument, Handler<T> task) {
     if (Context.isOnWorkerThread()) {
-      inThread.set(true);
-      try {
-        task.handle(argument);
-      } finally {
-        inThread.remove();
-      }
+      handle(argument, task);
     } else {
       scheduler.execute(() -> {
-        inThread.set(true);
-        try {
-          task.handle(argument);
-        } finally {
-          inThread.remove();
-        }
+        handle(argument, task);
       });
+    }
+  }
+
+  private <T> void handle(T argument, Handler<T> task) {
+    var current = Thread.currentThread();
+    inThread.add(current);
+    try {
+      task.handle(argument);
+    } finally {
+      inThread.remove(current);
     }
   }
 
   @Override
   public boolean inThread() {
-    return inThread.get() == Boolean.TRUE;
+    return inThread.contains(Thread.currentThread());
   }
 
   @Override
@@ -138,7 +133,8 @@ public class VirtualThreadContext extends ContextBase {
   }
 
   public void lock(Lock lock) {
-    inThread.remove();
+    var current = Thread.currentThread();
+    inThread.remove(current);
     Consumer<Runnable> cont = scheduler.unschedule();
     CompletableFuture<Void> latch = new CompletableFuture<>();
     try {
@@ -154,12 +150,13 @@ public class VirtualThreadContext extends ContextBase {
     } catch (ExecutionException e) {
       throwAsUnchecked(e);
     } finally {
-      inThread.set(true);
+      inThread.add(current);
     }
   }
 
   public <T> T await(CompletionStage<T> fut) {
-    inThread.remove();
+    var current = Thread.currentThread();
+    inThread.remove(current);
     Consumer<Runnable> cont = scheduler.unschedule();
     CompletableFuture<T> latch = new CompletableFuture<>();
     fut.whenComplete((v, err) -> {
@@ -175,7 +172,7 @@ public class VirtualThreadContext extends ContextBase {
       throwAsUnchecked(e.getCause());
       return null;
     } finally {
-      inThread.set(true);
+      inThread.add(current);
     }
   }
 
